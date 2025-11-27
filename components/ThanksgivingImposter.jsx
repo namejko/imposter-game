@@ -255,7 +255,7 @@ export default function ThanksgivingImposter() {
 
       {gameState === 'splash' && (
         <div className={cardStyle + " text-center"}>
-          <Turkey className="w-32 h-32 mx-auto mb-4" />
+          <Turkey className="w-32 h-32 mx-auto mb-4 dancing-turkey" />
           <h1 className="text-2xl font-bold text-amber-800 mb-1">Peyton's Thanksgiving</h1>
           <h2 className="text-3xl font-extrabold text-orange-600 mb-2">Family Imposter</h2>
           <p className="text-amber-700 italic mb-6 text-sm">"One of us isn't answering the same question..."</p>
