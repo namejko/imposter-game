@@ -1,412 +1,333 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+
+const Turkey = ({ className }) => (
+  <svg viewBox="0 0 200 200" className={className}>
+    <ellipse cx="100" cy="70" rx="70" ry="50" fill="#D2691E" />
+    <ellipse cx="60" cy="60" rx="25" ry="40" fill="#8B0000" />
+    <ellipse cx="100" cy="50" rx="25" ry="45" fill="#FF8C00" />
+    <ellipse cx="140" cy="60" rx="25" ry="40" fill="#8B0000" />
+    <ellipse cx="45" cy="75" rx="20" ry="35" fill="#CD853F" />
+    <ellipse cx="155" cy="75" rx="20" ry="35" fill="#CD853F" />
+    <ellipse cx="100" cy="130" rx="45" ry="40" fill="#8B4513" />
+    <circle cx="100" cy="95" r="22" fill="#8B4513" />
+    <circle cx="92" cy="90" r="6" fill="white" />
+    <circle cx="108" cy="90" r="6" fill="white" />
+    <circle cx="93" cy="91" r="3" fill="#1a1a1a" />
+    <circle cx="109" cy="91" r="3" fill="#1a1a1a" />
+    <polygon points="100,97 94,105 106,105" fill="#FFA500" />
+    <ellipse cx="100" cy="112" rx="4" ry="8" fill="#DC143C" />
+    <ellipse cx="100" cy="103" rx="6" ry="3" fill="#DC143C" />
+    <rect x="85" y="165" width="6" height="20" fill="#FFA500" />
+    <rect x="109" y="165" width="6" height="20" fill="#FFA500" />
+    <polygon points="75,185 91,185 88,195 82,185 78,195" fill="#FFA500" />
+    <polygon points="109,185 125,185 122,195 117,185 113,195" fill="#FFA500" />
+    <rect x="80" y="68" width="40" height="8" fill="#1a1a1a" />
+    <rect x="87" y="45" width="26" height="25" fill="#1a1a1a" />
+    <rect x="95" y="55" width="10" height="12" fill="#FFA500" />
+  </svg>
+);
+
+const FallingLeaf = ({ style }) => (
+  <div className="absolute text-2xl opacity-60" style={style}>🍂</div>
+);
+
+const ExitButton = ({ onClick }) => (
+  <button onClick={onClick} className="absolute top-4 right-4 w-10 h-10 bg-red-100 hover:bg-red-200 text-red-600 rounded-full flex items-center justify-center text-xl font-bold transition-all active:scale-95 shadow-md" aria-label="Exit game">✕</button>
+);
+
+const ConfirmDialog = ({ onConfirm, onCancel }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs text-center">
+      <div className="text-4xl mb-3">🦃</div>
+      <h3 className="text-lg font-bold text-amber-800 mb-2">Quit Game?</h3>
+      <p className="text-amber-700 text-sm mb-4">Are you sure you want to quit and start over?</p>
+      <div className="flex gap-3">
+        <button onClick={onCancel} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Cancel</button>
+        <button onClick={onConfirm} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Quit</button>
+      </div>
+    </div>
+  </div>
+);
 
 export default function ThanksgivingImposter() {
-  const [screen, setScreen] = useState('splash');
+  const [gameState, setGameState] = useState('splash');
   const [realQuestion, setRealQuestion] = useState('');
   const [imposterQuestion, setImposterQuestion] = useState('');
-  const [playerCount, setPlayerCount] = useState(4);
-  const [imposterPlayer, setImposterPlayer] = useState(null);
+  const [playerCount, setPlayerCount] = useState(3);
   const [currentPlayer, setCurrentPlayer] = useState(1);
-  const [showQuestion, setShowQuestion] = useState(false);
+  const [imposterPlayer, setImposterPlayer] = useState(null);
   const [questionHistory, setQuestionHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [revealedImposterQ, setRevealedImposterQ] = useState(false);
-  const [revealedImposter, setRevealedImposter] = useState(false);
+  const [recallPlayer, setRecallPlayer] = useState(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showImposterQuestion, setShowImposterQuestion] = useState(false);
+  const [showImposterPlayer, setShowImposterPlayer] = useState(false);
 
-  const startGame = () => {
-    if (realQuestion.trim() && imposterQuestion.trim()) {
-      const imposter = Math.floor(Math.random() * playerCount) + 1;
-      setImposterPlayer(imposter);
-      setCurrentPlayer(1);
-      setShowQuestion(false);
-      setRevealedImposterQ(false);
-      setRevealedImposter(false);
-      setScreen('handoff');
-    }
-  };
+  const startGame = useCallback(() => {
+    if (!realQuestion.trim() || !imposterQuestion.trim()) return;
+    const imposter = Math.floor(Math.random() * playerCount) + 1;
+    setImposterPlayer(imposter);
+    setCurrentPlayer(1);
+    setQuestionHistory(prev => [...prev, {
+      realQuestion: realQuestion.trim(),
+      imposterQuestion: imposterQuestion.trim(),
+      imposterPlayer: imposter,
+      playerCount,
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+    setGameState('ready');
+  }, [realQuestion, imposterQuestion, playerCount]);
 
-  const revealQuestion = () => setShowQuestion(true);
-  
+  const showQuestion = () => setGameState('viewing');
+
   const nextPlayer = () => {
-    setShowQuestion(false);
-    if (currentPlayer < playerCount) {
-      setCurrentPlayer(currentPlayer + 1);
-      setScreen('handoff');
+    if (currentPlayer >= playerCount) {
+      setGameState('waiting');
     } else {
-      setQuestionHistory([...questionHistory, {
-        realQuestion,
-        imposterQuestion,
-        imposterPlayer,
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-      setScreen('reveal');
+      setCurrentPlayer(prev => prev + 1);
+      setGameState('ready');
     }
   };
 
-  const resetGame = () => {
-    setScreen('setup');
+  const handleRecall = (player) => {
+    setRecallPlayer(player);
+    setGameState('recall');
+  };
+
+  const returnFromRecall = () => {
+    setRecallPlayer(null);
+    setGameState('waiting');
+  };
+
+  const goToReveal = () => {
+    setShowImposterQuestion(false);
+    setShowImposterPlayer(false);
+    setGameState('reveal');
+  };
+
+  const copyHistory = async () => {
+    const historyText = questionHistory.map((game, i) =>
+      `Game ${i + 1} (${game.timestamp}):\n  Real: "${game.realQuestion}"\n  Imposter: "${game.imposterQuestion}"\n  Imposter was: Player ${game.imposterPlayer} of ${game.playerCount}`
+    ).join('\n\n');
+    try {
+      await navigator.clipboard.writeText(historyText);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      const textArea = document.createElement('textarea');
+      textArea.value = historyText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const newGame = () => {
+    setGameState('splash');
     setRealQuestion('');
     setImposterQuestion('');
+    setPlayerCount(3);
     setCurrentPlayer(1);
-    setShowQuestion(false);
-    setRevealedImposterQ(false);
-    setRevealedImposter(false);
+    setImposterPlayer(null);
+    setRecallPlayer(null);
+    setShowExitConfirm(false);
+    setShowImposterQuestion(false);
+    setShowImposterPlayer(false);
   };
 
-  const copyHistory = () => {
-    const text = questionHistory.map((game, i) => 
-      `Game ${i + 1} (${game.timestamp}):\nReal: ${game.realQuestion}\nImposter: ${game.imposterQuestion}\nPlayer ${game.imposterPlayer} was the imposter`
-    ).join('\n\n');
-    navigator.clipboard.writeText(text);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+  const handleExitClick = () => setShowExitConfirm(true);
+  const handleExitConfirm = () => newGame();
+  const handleExitCancel = () => setShowExitConfirm(false);
+
+  const getPassButtonText = () => {
+    if (currentPlayer >= playerCount) {
+      return "DONE - Pass to Interviewer";
+    }
+    return `DONE - Pass to Player ${currentPlayer + 1}`;
   };
 
-  const buttonPrimary = "w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition-all active:scale-95 text-lg";
-  const buttonSecondary = "w-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold py-3 px-6 rounded-xl transition-all active:scale-95";
+  const containerStyle = "min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 flex flex-col items-center justify-center p-4 relative overflow-hidden";
+  const cardStyle = "bg-white/90 backdrop-blur rounded-2xl shadow-xl p-6 w-full max-w-sm relative";
+  const buttonPrimary = "w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition-all active:scale-95";
+  const buttonSecondary = "w-full bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all active:scale-95";
+  const inputStyle = "w-full p-3 border-2 border-amber-200 rounded-xl focus:border-orange-400 focus:outline-none bg-white text-gray-800";
 
-  // Splash Screen
-  if (screen === 'splash') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-100 via-amber-50 to-orange-100 flex flex-col items-center justify-center p-6">
-        <div className="text-8xl mb-4 animate-bounce">🦃</div>
-        <h1 className="text-4xl font-bold text-amber-800 text-center mb-2">
-          Peyton's Thanksgiving
-        </h1>
-        <h2 className="text-2xl font-semibold text-orange-600 text-center mb-4">
-          Family Imposter
-        </h2>
-        <p className="text-amber-700 text-center mb-8 italic text-lg">
-          "One of us isn't answering the same question..."
-        </p>
-        <div className="w-full max-w-xs space-y-3">
-          <button onClick={() => setScreen('setup')} className={buttonPrimary}>
-            🎮 Start Game
-          </button>
+  const leaves = [
+    { top: '10%', left: '5%', transform: 'rotate(25deg)' },
+    { top: '15%', right: '8%', transform: 'rotate(-15deg)' },
+    { bottom: '20%', left: '10%', transform: 'rotate(45deg)' },
+    { bottom: '15%', right: '5%', transform: 'rotate(-30deg)' },
+    { top: '40%', left: '2%', transform: 'rotate(10deg)' },
+    { top: '60%', right: '3%', transform: 'rotate(-45deg)' },
+  ];
+
+  return (
+    <div className={containerStyle}>
+      {leaves.map((style, i) => <FallingLeaf key={i} style={style} />)}
+
+      {showExitConfirm && <ConfirmDialog onConfirm={handleExitConfirm} onCancel={handleExitCancel} />}
+
+      {gameState === 'splash' && (
+        <div className={cardStyle + " text-center"}>
+          <Turkey className="w-32 h-32 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-amber-800 mb-1">Peyton's Thanksgiving</h1>
+          <h2 className="text-3xl font-extrabold text-orange-600 mb-2">Family Imposter</h2>
+          <p className="text-amber-700 italic mb-6 text-sm">"One of us isn't answering the same question..."</p>
+          <button onClick={() => setGameState('setup')} className={buttonPrimary}>🦃 Start Game</button>
           {questionHistory.length > 0 && (
-            <button onClick={() => setShowHistory(true)} className={buttonSecondary}>
-              📜 View History ({questionHistory.length} games)
+            <button onClick={() => setShowHistory(true)} className="mt-4 text-amber-700 underline text-sm">
+              View Question History ({questionHistory.length})
             </button>
           )}
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Setup Screen
-  if (screen === 'setup') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-100 via-amber-50 to-orange-100 p-6">
-        <div className="max-w-md mx-auto">
-          <div className="text-center mb-6">
-            <span className="text-5xl">🦃</span>
-            <h2 className="text-2xl font-bold text-amber-800 mt-2">Game Setup</h2>
-            <p className="text-amber-600 text-sm">Interviewer's eyes only!</p>
-          </div>
-          
-          <div className="bg-white rounded-2xl shadow-lg p-5 space-y-4">
+      {gameState === 'setup' && (
+        <div className={cardStyle}>
+          <ExitButton onClick={handleExitClick} />
+          <h2 className="text-xl font-bold text-amber-800 mb-4 text-center">🦃 Game Setup</h2>
+          <p className="text-amber-700 text-sm mb-4 text-center">Interviewer: Enter two similar questions!</p>
+          <div className="space-y-4">
             <div>
-              <label className="block text-amber-800 font-semibold mb-2">
-                Real Question (for most players)
-              </label>
-              <textarea
-                value={realQuestion}
-                onChange={(e) => setRealQuestion(e.target.value)}
-                className="w-full p-3 border-2 border-amber-200 rounded-xl focus:border-orange-400 focus:outline-none text-gray-700"
-                rows="2"
-                placeholder="What's your favorite Thanksgiving dish?"
-              />
+              <label className="block text-amber-800 font-semibold mb-1 text-sm">The Real Question:</label>
+              <textarea value={realQuestion} onChange={(e) => setRealQuestion(e.target.value)} className={inputStyle + " h-20 resize-none"} placeholder="What's your favorite holiday dish?" />
             </div>
-            
             <div>
-              <label className="block text-amber-800 font-semibold mb-2">
-                Imposter Question (for one player)
-              </label>
-              <textarea
-                value={imposterQuestion}
-                onChange={(e) => setImposterQuestion(e.target.value)}
-                className="w-full p-3 border-2 border-amber-200 rounded-xl focus:border-orange-400 focus:outline-none text-gray-700"
-                rows="2"
-                placeholder="What's your favorite Halloween candy?"
-              />
+              <label className="block text-amber-800 font-semibold mb-1 text-sm">The Imposter Question:</label>
+              <textarea value={imposterQuestion} onChange={(e) => setImposterQuestion(e.target.value)} className={inputStyle + " h-20 resize-none"} placeholder="What's your favorite holiday movie?" />
             </div>
-            
             <div>
-              <label className="block text-amber-800 font-semibold mb-2">
-                Number of Players: {playerCount}
-              </label>
-              <input
-                type="range"
-                min="3"
-                max="20"
-                value={playerCount}
-                onChange={(e) => setPlayerCount(parseInt(e.target.value))}
-                className="w-full accent-orange-500"
-              />
-              <div className="flex justify-between text-sm text-amber-600">
-                <span>3</span>
-                <span>20</span>
+              <label className="block text-amber-800 font-semibold mb-1 text-sm">Number of Players:</label>
+              <div className="flex items-center gap-4 justify-center">
+                <button onClick={() => setPlayerCount(Math.max(3, playerCount - 1))} className="w-12 h-12 bg-amber-200 hover:bg-amber-300 rounded-full text-2xl font-bold text-amber-800 transition-all">-</button>
+                <span className="text-3xl font-bold text-amber-800 w-12 text-center">{playerCount}</span>
+                <button onClick={() => setPlayerCount(Math.min(20, playerCount + 1))} className="w-12 h-12 bg-amber-200 hover:bg-amber-300 rounded-full text-2xl font-bold text-amber-800 transition-all">+</button>
               </div>
             </div>
-            
-            <button 
-              onClick={startGame}
-              disabled={!realQuestion.trim() || !imposterQuestion.trim()}
-              className={`${buttonPrimary} ${(!realQuestion.trim() || !imposterQuestion.trim()) ? 'opacity-50' : ''}`}
-            >
-              🚀 Begin Round
-            </button>
-            
-            <button 
-              onClick={() => setScreen('splash')}
-              className="w-full text-amber-600 py-2"
-            >
-              ← Back
-            </button>
+            <button onClick={startGame} disabled={!realQuestion.trim() || !imposterQuestion.trim()} className={buttonPrimary + " disabled:opacity-50 disabled:cursor-not-allowed mt-4"}>Begin! 🍂</button>
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Handoff Screen
-  if (screen === 'handoff') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-800 via-amber-700 to-orange-800 flex flex-col items-center justify-center p-6">
-        <div className="text-6xl mb-6">🤫</div>
-        <h2 className="text-3xl font-bold text-white text-center mb-4">
-          Pass to Player {currentPlayer}
-        </h2>
-        <p className="text-amber-200 text-center mb-8 text-lg">
-          No peeking! Hand the device over.
-        </p>
-        <button 
-          onClick={() => setScreen('question')}
-          className="bg-white text-amber-800 font-bold py-4 px-10 rounded-2xl shadow-lg text-xl active:scale-95 transition-all"
-        >
-          I'm Player {currentPlayer} 👋
-        </button>
-      </div>
-    );
-  }
-
-  // Question Screen
-  if (screen === 'question') {
-    const isImposter = currentPlayer === imposterPlayer;
-    const question = isImposter ? imposterQuestion : realQuestion;
-    
-    return (
-      <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${
-        isImposter 
-          ? 'bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900'
-          : 'bg-gradient-to-b from-orange-100 via-amber-50 to-orange-100'
-      }`}>
-        <div className="text-center mb-6">
-          <span className="text-5xl">{isImposter ? '🕵️' : '🦃'}</span>
-          <h2 className={`text-xl font-semibold mt-2 ${isImposter ? 'text-purple-200' : 'text-amber-700'}`}>
-            Player {currentPlayer}
-          </h2>
+      {gameState === 'ready' && (
+        <div className={cardStyle + " text-center"}>
+          <ExitButton onClick={handleExitClick} />
+          <div className="text-6xl mb-4">👤</div>
+          <h2 className="text-2xl font-bold text-amber-800 mb-2">Player {currentPlayer}</h2>
+          <p className="text-amber-700 mb-6">Take the phone privately, then tap below to see your question.</p>
+          <button onClick={showQuestion} className={buttonPrimary}>👀 Show My Question</button>
         </div>
-        
-        {!showQuestion ? (
-          <button 
-            onClick={revealQuestion}
-            className={`${isImposter 
-              ? 'bg-purple-500 hover:bg-purple-600' 
-              : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'
-            } text-white font-bold py-5 px-10 rounded-2xl shadow-lg text-xl active:scale-95 transition-all`}
-          >
-            👁️ Reveal My Question
-          </button>
-        ) : (
-          <div className="w-full max-w-sm">
-            <div className={`rounded-2xl shadow-lg p-6 mb-6 ${
-              isImposter ? 'bg-purple-700/50' : 'bg-white'
-            }`}>
-              <p className={`text-sm font-semibold mb-2 ${isImposter ? 'text-purple-300' : 'text-amber-600'}`}>
-                YOUR QUESTION:
-              </p>
-              <p className={`text-2xl font-bold ${isImposter ? 'text-white' : 'text-amber-800'}`}>
-                {question}
-              </p>
-            </div>
-            
-            <p className={`text-center mb-4 text-sm ${isImposter ? 'text-purple-300' : 'text-amber-600'}`}>
-              Memorize this, then pass the device!
-            </p>
-            
-            <button 
-              onClick={nextPlayer}
-              className={`w-full ${isImposter 
-                ? 'bg-purple-500 hover:bg-purple-600' 
-                : 'bg-gradient-to-r from-orange-500 to-red-500'
-              } text-white font-bold py-4 px-6 rounded-2xl shadow-lg active:scale-95 transition-all`}
-            >
-              {currentPlayer < playerCount ? '➡️ Next Player' : '🎭 Everyone Ready!'}
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
+      )}
 
-  // Waiting/Recall Screen
-  if (screen === 'waiting') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-100 via-amber-50 to-orange-100 p-6">
-        <div className="max-w-md mx-auto text-center">
-          <span className="text-5xl">🤔</span>
-          <h2 className="text-2xl font-bold text-amber-800 mt-4 mb-2">
-            Forgot Your Question?
-          </h2>
-          <p className="text-amber-600 mb-6">Tap your number to see it again:</p>
-          
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            {Array.from({ length: playerCount }, (_, i) => i + 1).map((num) => (
-              <button
-                key={num}
-                onClick={() => {
-                  setCurrentPlayer(num);
-                  setShowQuestion(false);
-                  setScreen('question');
-                }}
-                className="bg-white hover:bg-amber-100 text-amber-800 font-bold py-4 rounded-xl shadow-md active:scale-95 transition-all"
-              >
-                {num}
-              </button>
-            ))}
+      {gameState === 'viewing' && (
+        <div className={cardStyle + " text-center"}>
+          <ExitButton onClick={handleExitClick} />
+          <h3 className="text-amber-600 font-bold mb-4 text-sm uppercase tracking-wide">PLAYER {currentPlayer} QUESTION</h3>
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
+            <p className="text-xl text-amber-900 font-medium">{currentPlayer === imposterPlayer ? imposterQuestion : realQuestion}</p>
           </div>
-          
-          <button 
-            onClick={() => setScreen('reveal')}
-            className={buttonPrimary}
-          >
-            🎭 Time to Vote!
-          </button>
+          <button onClick={nextPlayer} className={buttonPrimary}>{getPassButtonText()}</button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  // Reveal Screen
-  if (screen === 'reveal') {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-800 via-orange-700 to-red-800 flex flex-col items-center justify-center p-6">
-        <div className="text-center mb-6">
-          <span className="text-6xl">🎭</span>
-          <h2 className="text-3xl font-bold text-white mt-4">Round Complete!</h2>
-        </div>
-        
-        <div className="w-full max-w-sm space-y-4">
-          <div className="bg-white/20 backdrop-blur rounded-2xl p-5">
-            <p className="text-amber-200 text-sm font-semibold mb-1">THE REAL QUESTION:</p>
-            <p className="text-white text-xl font-bold">{realQuestion}</p>
-          </div>
-          
-          {/* Reveal Imposter Question Button */}
-          {!revealedImposterQ ? (
-            <button 
-              onClick={() => setRevealedImposterQ(true)}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg active:scale-95 transition-all"
-            >
-              🔍 Reveal Imposter Question
-            </button>
-          ) : (
-            <div className="bg-purple-600/80 backdrop-blur rounded-2xl p-5">
-              <p className="text-purple-200 text-sm font-semibold mb-1">IMPOSTER QUESTION:</p>
-              <p className="text-white text-xl font-bold">{imposterQuestion}</p>
-            </div>
-          )}
-          
-          {/* Reveal Imposter Button */}
-          {!revealedImposter ? (
-            <button 
-              onClick={() => setRevealedImposter(true)}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg active:scale-95 transition-all"
-            >
-              🕵️ Reveal Imposter
-            </button>
-          ) : (
-            <div className="bg-red-600/80 backdrop-blur rounded-2xl p-5 text-center">
-              <p className="text-red-200 text-sm font-semibold mb-1">THE IMPOSTER WAS:</p>
-              <p className="text-white text-3xl font-bold">Player {imposterPlayer}!</p>
-            </div>
-          )}
-          
-          <div className="pt-4 space-y-3">
-            <button onClick={resetGame} className="w-full bg-white text-amber-800 font-bold py-4 px-6 rounded-2xl shadow-lg active:scale-95 transition-all">
-              🔄 New Round
-            </button>
-            <button 
-              onClick={() => {
-                setScreen('splash');
-                setRealQuestion('');
-                setImposterQuestion('');
-              }} 
-              className="w-full text-white/80 py-2"
-            >
-              🏠 Back to Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // History Modal
-  if (showHistory) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-100 via-amber-50 to-orange-100 p-6">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg p-5">
-          <h2 className="text-2xl font-bold text-amber-800 text-center mb-4">
-            📜 Game History
-          </h2>
-          
-          {questionHistory.length === 0 ? (
-            <p className="text-amber-700 text-center text-sm">
-              No games played yet this session!
-            </p>
-          ) : (
-            <div className="space-y-3 mb-4">
-              {questionHistory.map((game, i) => (
-                <div key={i} className="bg-amber-50 rounded-lg p-3 text-left">
-                  <p className="text-xs text-amber-500 mb-1">
-                    Game {i + 1} • {game.timestamp}
-                  </p>
-                  <p className="text-amber-800 text-sm">
-                    <span className="font-semibold">Real:</span> {game.realQuestion}
-                  </p>
-                  <p className="text-amber-700 text-sm">
-                    <span className="font-semibold">Imposter:</span> {game.imposterQuestion}
-                  </p>
-                  <p className="text-orange-600 text-sm font-medium">
-                    Player {game.imposterPlayer} was the imposter
-                  </p>
-                </div>
+      {gameState === 'waiting' && (
+        <div className={cardStyle + " text-center"}>
+          <ExitButton onClick={handleExitClick} />
+          <div className="text-4xl mb-3">🤔</div>
+          <h2 className="text-xl font-bold text-amber-800 mb-2">Who Forgot Their Question?</h2>
+          <p className="text-amber-700 text-sm mb-4">Tap your player number to see your question again:</p>
+          <div className="mb-6">
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: playerCount }, (_, i) => (
+                <button key={i + 1} onClick={() => handleRecall(i + 1)} className="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold py-3 px-3 rounded-lg transition-all text-base active:scale-95">{i + 1}</button>
               ))}
             </div>
-          )}
-          
-          {questionHistory.length > 0 && (
-            <button 
-              onClick={copyHistory} 
-              className={buttonSecondary + " mb-3"}
-            >
-              {copySuccess ? '✓ Copied!' : '📋 Copy History to Clipboard'}
-            </button>
-          )}
-          
-          <button 
-            onClick={() => setShowHistory(false)} 
-            className="w-full text-amber-700 py-2 text-sm"
-          >
-            Close
-          </button>
+          </div>
+          <button onClick={goToReveal} className={buttonPrimary}>📣 Announce the Question</button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return null;
+      {gameState === 'recall' && (
+        <div className={cardStyle + " text-center"}>
+          <ExitButton onClick={handleExitClick} />
+          <h3 className="text-amber-600 font-semibold mb-1 text-sm">Player {recallPlayer}'s Question:</h3>
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
+            <p className="text-xl text-amber-900 font-medium">{recallPlayer === imposterPlayer ? imposterQuestion : realQuestion}</p>
+          </div>
+          <button onClick={returnFromRecall} className={buttonSecondary}>← Return to Game</button>
+        </div>
+      )}
+
+      {gameState === 'reveal' && (
+        <div className={cardStyle + " text-center"}>
+          <ExitButton onClick={handleExitClick} />
+          <div className="text-4xl mb-2">🎉</div>
+          <h2 className="text-lg font-bold text-amber-800 mb-3">The Real Question Was:</h2>
+          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-4">
+            <p className="text-xl text-green-800 font-semibold">"{realQuestion}"</p>
+          </div>
+
+          <div className="space-y-3 mb-4">
+            {!showImposterQuestion ? (
+              <button
+                onClick={() => setShowImposterQuestion(true)}
+                className="w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 px-6 rounded-xl transition-all active:scale-95 border-2 border-red-200"
+              >
+                🔍 Reveal Imposter Question
+              </button>
+            ) : (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3">
+                <p className="text-red-700 text-sm mb-1">The Imposter Question:</p>
+                <p className="text-red-800 font-medium">"{imposterQuestion}"</p>
+              </div>
+            )}
+
+            {!showImposterPlayer ? (
+              <button
+                onClick={() => setShowImposterPlayer(true)}
+                className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 px-6 rounded-xl transition-all active:scale-95 border-2 border-purple-200"
+              >
+                🕵️ Reveal Imposter
+              </button>
+            ) : (
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-3">
+                <p className="text-purple-800 font-bold text-lg">🕵️ Player {imposterPlayer} was the Imposter!</p>
+              </div>
+            )}
+          </div>
+
+          <button onClick={newGame} className={buttonPrimary}>🦃 New Game</button>
+          <button onClick={() => setGameState('waiting')} className="w-full text-amber-700 py-2 mt-2 text-sm">← Back to Player Questions</button>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowHistory(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-amber-800 text-center mb-3">📜 Question History</h2>
+            <textarea
+              readOnly
+              className="w-full h-48 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl text-sm text-amber-900 resize-none focus:outline-none"
+              value={questionHistory.length === 0
+                ? "No games played yet this session!"
+                : questionHistory.map((game, i) =>
+                  `Game ${i + 1} (${game.timestamp}):\nReal: ${game.realQuestion}\nImposter: ${game.imposterQuestion}\nPlayer ${game.imposterPlayer} was the imposter`
+                ).join('\n\n─────────────────\n\n')
+              }
+            />
+            <div className="mt-3 space-y-2">
+              {questionHistory.length > 0 && (
+                <button onClick={copyHistory} className={buttonSecondary}>{copySuccess ? '✓ Copied!' : '📋 Copy History to Clipboard'}</button>
+              )}
+              <button onClick={() => setShowHistory(false)} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all active:scale-95">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
