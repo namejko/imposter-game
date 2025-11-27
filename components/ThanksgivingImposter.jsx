@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 const Turkey = ({ className }) => (
   <svg viewBox="0 0 200 200" className={className}>
@@ -27,8 +27,19 @@ const Turkey = ({ className }) => (
   </svg>
 );
 
-const FallingLeaf = ({ style }) => (
-  <div className="absolute text-2xl opacity-60" style={style}>🍂</div>
+const FallingLeaf = ({ style, duration, delay, sway, rotation }) => (
+  <div
+    className="absolute text-2xl pointer-events-none"
+    style={{
+      ...style,
+      top: 0,
+      animation: `fall ${duration}s linear ${delay}s infinite`,
+      '--sway': `${sway}px`,
+      '--rotation': `${rotation}deg`,
+    }}
+  >
+    🍂
+  </div>
 );
 
 const ExitButton = ({ onClick }) => (
@@ -150,24 +161,41 @@ export default function ThanksgivingImposter() {
     return `DONE - Pass to Player ${currentPlayer + 1}`;
   };
 
+  const [leaves, setLeaves] = useState([]);
+
+  useEffect(() => {
+    const count = Math.floor(Math.random() * 16) + 15; // 15-30 leaves
+    setLeaves(Array.from({ length: count }, (_, i) => {
+      const duration = 8 + Math.random() * 8; // 8-16 seconds
+      return {
+        id: i,
+        left: `${Math.random() * 100}%`,
+        duration,
+        delay: -Math.random() * duration, // Negative delay starts animation mid-cycle
+        sway: (Math.random() - 0.5) * 100, // -50px to +50px
+        rotation: Math.random() * 720 - 360, // -360 to +360 degrees
+      };
+    }));
+  }, []);
+
   const containerStyle = "min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 flex flex-col items-center justify-center p-4 relative overflow-hidden";
   const cardStyle = "bg-white/90 backdrop-blur rounded-2xl shadow-xl p-6 w-full max-w-sm relative";
   const buttonPrimary = "w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg transition-all active:scale-95";
   const buttonSecondary = "w-full bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all active:scale-95";
   const inputStyle = "w-full p-3 border-2 border-amber-200 rounded-xl focus:border-orange-400 focus:outline-none bg-white text-gray-800";
 
-  const leaves = [
-    { top: '10%', left: '5%', transform: 'rotate(25deg)' },
-    { top: '15%', right: '8%', transform: 'rotate(-15deg)' },
-    { bottom: '20%', left: '10%', transform: 'rotate(45deg)' },
-    { bottom: '15%', right: '5%', transform: 'rotate(-30deg)' },
-    { top: '40%', left: '2%', transform: 'rotate(10deg)' },
-    { top: '60%', right: '3%', transform: 'rotate(-45deg)' },
-  ];
-
   return (
     <div className={containerStyle}>
-      {leaves.map((style, i) => <FallingLeaf key={i} style={style} />)}
+      {leaves.map((leaf) => (
+        <FallingLeaf
+          key={leaf.id}
+          style={{ left: leaf.left }}
+          duration={leaf.duration}
+          delay={leaf.delay}
+          sway={leaf.sway}
+          rotation={leaf.rotation}
+        />
+      ))}
 
       {showExitConfirm && <ConfirmDialog onConfirm={handleExitConfirm} onCancel={handleExitCancel} />}
 
