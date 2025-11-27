@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import questionSets from '../data/questionSets';
 
 const Turkey = ({ className }) => (
   <svg viewBox="0 0 200 200" className={className}>
@@ -64,7 +65,7 @@ export default function ThanksgivingImposter() {
   const [gameState, setGameState] = useState('splash');
   const [realQuestion, setRealQuestion] = useState('');
   const [imposterQuestion, setImposterQuestion] = useState('');
-  const [playerCount, setPlayerCount] = useState(3);
+  const [playerCount, setPlayerCount] = useState(7);
   const [currentPlayer, setCurrentPlayer] = useState(1);
   const [imposterPlayer, setImposterPlayer] = useState(null);
   const [questionHistory, setQuestionHistory] = useState([]);
@@ -74,6 +75,24 @@ export default function ThanksgivingImposter() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showImposterQuestion, setShowImposterQuestion] = useState(false);
   const [showImposterPlayer, setShowImposterPlayer] = useState(false);
+  const [questionHistoryIndex, setQuestionHistoryIndex] = useState(-1);
+  const [viewedQuestions, setViewedQuestions] = useState([]);
+
+  // Load player count from sessionStorage on mount
+  useEffect(() => {
+    const savedPlayerCount = sessionStorage.getItem('imposterGamePlayerCount');
+    if (savedPlayerCount) {
+      const count = parseInt(savedPlayerCount, 10);
+      if (count >= 3 && count <= 20) {
+        setPlayerCount(count);
+      }
+    }
+  }, []);
+
+  // Save player count to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('imposterGamePlayerCount', playerCount.toString());
+  }, [playerCount]);
 
   const startGame = useCallback(() => {
     if (!realQuestion.trim() || !imposterQuestion.trim()) return;
@@ -141,18 +160,53 @@ export default function ThanksgivingImposter() {
     setGameState('splash');
     setRealQuestion('');
     setImposterQuestion('');
-    setPlayerCount(3);
+    // playerCount is preserved via sessionStorage
     setCurrentPlayer(1);
     setImposterPlayer(null);
     setRecallPlayer(null);
     setShowExitConfirm(false);
     setShowImposterQuestion(false);
     setShowImposterPlayer(false);
+    setQuestionHistoryIndex(-1);
+    setViewedQuestions([]);
   };
 
   const handleExitClick = () => setShowExitConfirm(true);
   const handleExitConfirm = () => newGame();
   const handleExitCancel = () => setShowExitConfirm(false);
+
+  const generateRandomQuestion = useCallback(() => {
+    const randomIndex = Math.floor(Math.random() * questionSets.length);
+    const questionSet = questionSets[randomIndex];
+
+    setRealQuestion(questionSet.realQuestion);
+    setImposterQuestion(questionSet.imposterQuestion);
+
+    // Add to viewed history (truncate forward history if we're not at the end)
+    const newHistory = [...viewedQuestions.slice(0, questionHistoryIndex + 1), questionSet];
+    setViewedQuestions(newHistory);
+    setQuestionHistoryIndex(newHistory.length - 1);
+  }, [viewedQuestions, questionHistoryIndex]);
+
+  const goToPreviousQuestion = useCallback(() => {
+    if (questionHistoryIndex > 0) {
+      const prevIndex = questionHistoryIndex - 1;
+      const questionSet = viewedQuestions[prevIndex];
+      setRealQuestion(questionSet.realQuestion);
+      setImposterQuestion(questionSet.imposterQuestion);
+      setQuestionHistoryIndex(prevIndex);
+    }
+  }, [questionHistoryIndex, viewedQuestions]);
+
+  const goToNextQuestion = useCallback(() => {
+    if (questionHistoryIndex < viewedQuestions.length - 1) {
+      const nextIndex = questionHistoryIndex + 1;
+      const questionSet = viewedQuestions[nextIndex];
+      setRealQuestion(questionSet.realQuestion);
+      setImposterQuestion(questionSet.imposterQuestion);
+      setQuestionHistoryIndex(nextIndex);
+    }
+  }, [questionHistoryIndex, viewedQuestions]);
 
   const getPassButtonText = () => {
     if (currentPlayer >= playerCount) {
@@ -220,6 +274,39 @@ export default function ThanksgivingImposter() {
           <h2 className="text-xl font-bold text-amber-800 mb-4 text-center">🦃 Game Setup</h2>
           <p className="text-amber-700 text-sm mb-4 text-center">Interviewer: Enter two similar questions!</p>
           <div className="space-y-4">
+            {/* Random Question Generator */}
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={goToPreviousQuestion}
+                  disabled={questionHistoryIndex <= 0}
+                  className="w-10 h-10 bg-amber-200 hover:bg-amber-300 disabled:bg-amber-100 disabled:text-amber-400 text-amber-800 font-bold rounded-full transition-all active:scale-95 flex items-center justify-center"
+                  aria-label="Previous question"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={generateRandomQuestion}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition-all active:scale-95"
+                >
+                  🎲 Random Questions
+                </button>
+                <button
+                  onClick={goToNextQuestion}
+                  disabled={questionHistoryIndex >= viewedQuestions.length - 1}
+                  className="w-10 h-10 bg-amber-200 hover:bg-amber-300 disabled:bg-amber-100 disabled:text-amber-400 text-amber-800 font-bold rounded-full transition-all active:scale-95 flex items-center justify-center"
+                  aria-label="Next question"
+                >
+                  →
+                </button>
+              </div>
+              {viewedQuestions.length > 0 && (
+                <p className="text-xs text-amber-600 text-center mt-2">
+                  {questionHistoryIndex + 1} of {viewedQuestions.length} viewed
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-amber-800 font-semibold mb-1 text-sm">The Real Question:</label>
               <textarea value={realQuestion} onChange={(e) => setRealQuestion(e.target.value)} className={inputStyle + " h-20 resize-none"} placeholder="What's your favorite holiday dish?" />

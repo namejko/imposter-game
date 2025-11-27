@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Thanksgiving-themed party game where one player secretly receives a different question than everyone else. Players answer the question out loud, then vote on who they think had the different (imposter) question.
 
+The questions are meant to be illict similar responses but somewhat likely to cause hilarious reactions. An example is Real Question: "Name a place you would like to visit?" and Fake Question: "Name a country that seems like it is always at war?" Answers could be funny because the imposter may have to say why they would like to visit Iraq or Syria. 
+
 ## Commands
 
 ```bash
