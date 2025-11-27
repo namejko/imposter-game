@@ -243,7 +243,6 @@ export default function ThanksgivingImposter() {
 
       {gameState === 'ready' && (
         <div className={cardStyle + " text-center"}>
-          <ExitButton onClick={handleExitClick} />
           <div className="text-6xl mb-4">👤</div>
           <h2 className="text-2xl font-bold text-amber-800 mb-2">Player {currentPlayer}</h2>
           <p className="text-amber-700 mb-6">Take the phone privately, then tap below to see your question.</p>
@@ -253,7 +252,6 @@ export default function ThanksgivingImposter() {
 
       {gameState === 'viewing' && (
         <div className={cardStyle + " text-center"}>
-          <ExitButton onClick={handleExitClick} />
           <h3 className="text-amber-600 font-bold mb-4 text-sm uppercase tracking-wide">PLAYER {currentPlayer} QUESTION</h3>
           <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
             <p className="text-xl text-amber-900 font-medium">{currentPlayer === imposterPlayer ? imposterQuestion : realQuestion}</p>
